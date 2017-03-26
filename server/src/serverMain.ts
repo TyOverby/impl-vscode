@@ -12,6 +12,8 @@ import {
 	CompletionItem, CompletionItemKind
 } from 'vscode-languageserver';
 
+import * as child_process from 'child_process';
+
 // Create a connection for the server. The connection uses Node's IPC as a transport
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 
@@ -23,7 +25,7 @@ let documents: TextDocuments = new TextDocuments();
 documents.listen(connection);
 
 // After the server has started the client sends an initilize request. The server receives
-// in the passed params the rootPath of the workspace plus the client capabilites. 
+// in the passed params the rootPath of the workspace plus the client capabilites.
 let workspaceRoot: string;
 connection.onInitialize((params): InitializeResult => {
 	workspaceRoot = params.rootPath;
@@ -68,27 +70,23 @@ connection.onDidChangeConfiguration((change) => {
 });
 
 function validateTextDocument(textDocument: TextDocument): void {
-	let diagnostics: Diagnostic[] = [];
-	let lines = textDocument.getText().split(/\r?\n/g);
-	let problems = 0;
-	for (var i = 0; i < lines.length && problems < maxNumberOfProblems; i++) {
-		let line = lines[i];
-		let index = line.indexOf('typescript');
-		if (index >= 0) {
-			problems++;
-			diagnostics.push({
-				severity: DiagnosticSeverity.Warning,
-				range: {
-					start: { line: i, character: index },
-					end: { line: i, character: index + 10 }
-				},
-				message: `${line.substr(index, 10)} should be spelled TypeScript`,
-				source: 'ex'
-			});
-		}
-	}
-	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+
+	let validatorLocation = "/Users/tyoverby/workspace/rust/implicit-gpu/target/debug/validator";
+	let child = child_process.spawn(validatorLocation);
+	let buff = "";
+
+	child.stdout.on('data', function (data) {
+		buff += data.toString();
+	});
+
+	child.stdin.end(textDocument.getText());
+
+	child.on('close', () => {
+		connection.sendDiagnostics({
+			uri: textDocument.uri,
+			diagnostics: JSON.parse(buff)
+		})
+	})
 }
 
 connection.onDidChangeWatchedFiles((change) => {
@@ -99,7 +97,7 @@ connection.onDidChangeWatchedFiles((change) => {
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion((textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-	// The pass parameter contains the position of the text document in 
+	// The pass parameter contains the position of the text document in
 	// which code complete got requested. For the example we ignore this
 	// info and always provide the same completion items.
 	return [
