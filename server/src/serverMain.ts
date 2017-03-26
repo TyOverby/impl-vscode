@@ -35,7 +35,7 @@ connection.onInitialize((params): InitializeResult => {
 			textDocumentSync: documents.syncKind,
 			// Tell the client that the server support code complete
 			completionProvider: {
-				resolveProvider: true
+				resolveProvider: false
 			}
 		}
 	}
@@ -47,32 +47,27 @@ documents.onDidChangeContent((change) => {
 	validateTextDocument(change.document);
 });
 
-// The settings interface describe the server relevant settings part
-interface Settings {
-	languageServerExample: ExampleSettings;
-}
-
-// These are the example settings we defined in the client's package.json
-// file
-interface ExampleSettings {
-	maxNumberOfProblems: number;
-}
-
 // hold the maxNumberOfProblems setting
-let maxNumberOfProblems: number;
+let validatorLocation = "";
+
 // The settings have changed. Is send on server activation
 // as well.
 connection.onDidChangeConfiguration((change) => {
-	let settings = <Settings>change.settings;
-	maxNumberOfProblems = settings.languageServerExample.maxNumberOfProblems || 100;
-	// Revalidate any open text documents
+	let settings = change.settings;
+	validatorLocation = settings.implicit.lintLocation || ""
 	documents.all().forEach(validateTextDocument);
 });
 
 function validateTextDocument(textDocument: TextDocument): void {
 
-	let validatorLocation = "/Users/tyoverby/workspace/rust/implicit-gpu/target/debug/validator";
-	let child = child_process.spawn(validatorLocation);
+	let child: child_process.ChildProcess = null;
+	try {
+		child = child_process.spawn(validatorLocation);
+	} catch (e) {
+		connection.window.showErrorMessage(`could not spawn child ${validatorLocation}`);
+		return;
+	}
+
 	let buff = "";
 
 	child.stdout.on('data', function (data) {
@@ -88,64 +83,6 @@ function validateTextDocument(textDocument: TextDocument): void {
 		})
 	})
 }
-
-connection.onDidChangeWatchedFiles((change) => {
-	// Monitored files have change in VSCode
-	connection.console.log('We recevied an file change event');
-});
-
-
-// This handler provides the initial list of the completion items.
-connection.onCompletion((textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-	// The pass parameter contains the position of the text document in
-	// which code complete got requested. For the example we ignore this
-	// info and always provide the same completion items.
-	return [
-		{
-			label: 'TypeScript',
-			kind: CompletionItemKind.Text,
-			data: 1
-		},
-		{
-			label: 'JavaScript',
-			kind: CompletionItemKind.Text,
-			data: 2
-		}
-	]
-});
-
-// This handler resolve additional information for the item selected in
-// the completion list.
-connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
-	if (item.data === 1) {
-		item.detail = 'TypeScript details',
-			item.documentation = 'TypeScript documentation'
-	} else if (item.data === 2) {
-		item.detail = 'JavaScript details',
-			item.documentation = 'JavaScript documentation'
-	}
-	return item;
-});
-
-/*
-connection.onDidOpenTextDocument((params) => {
-	// A text document got opened in VSCode.
-	// params.uri uniquely identifies the document. For documents store on disk this is a file URI.
-	// params.text the initial full content of the document.
-	connection.console.log(`${params.textDocument.uri} opened.`);
-});
-connection.onDidChangeTextDocument((params) => {
-	// The content of a text document did change in VSCode.
-	// params.uri uniquely identifies the document.
-	// params.contentChanges describe the content changes to the document.
-	connection.console.log(`${params.textDocument.uri} changed: ${JSON.stringify(params.contentChanges)}`);
-});
-connection.onDidCloseTextDocument((params) => {
-	// A text document got closed in VSCode.
-	// params.uri uniquely identifies the document.
-	connection.console.log(`${params.textDocument.uri} closed.`);
-});
-*/
 
 // Listen on the connection
 connection.listen();
