@@ -1,0 +1,60 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Implicit Scene",
+	"patterns": [
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#operators"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#shapes"
+		}
+	],
+	"repository": {
+		"operators": {
+			"patterns": [
+				{
+					"name": "keyword.impl",
+					"match": "\\b(or|and|xor|freeze|not|break)\\b"
+				}
+			]
+		},
+		"shapes": {
+			"patterns": [
+				{
+					"name": "entity.name.function",
+					"match": "\\b(circle)\\b"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric",
+					"match": "\\b([0-9]+\\.[0-9]+)\\b"
+				},
+				{
+					"name": "constant.numeric",
+					"match": "\\b([0-9]+)\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.impl",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.impl",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.impl"
+}
